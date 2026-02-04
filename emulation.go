@@ -6,17 +6,29 @@ import (
 	"time"
 )
 
-// LatencyGenerator calculates the bandwidth for a packet.
-type BandwidthGenerator interface{ Generate() uint64 }
+// Bandwidth provides the bandwidth limit for a connection.
+type Bandwidth interface {
+	// Limit returns the current allowed bits per second.
+	Limit() uint64
+}
 
-// LatencyGenerator calculates the latency for a packet.
-type LatencyGenerator interface{ Generate() time.Duration }
+// Latency provides the latency for a packet.
+type Latency interface {
+	// Duration returns how long the current packet should be delayed.
+	Duration() time.Duration
+}
 
-// JitterGenerator calculates the jitter for a packet.
-type JitterGenerator interface{ Generate() time.Duration }
+// Jitter provides the jitter for a packet.
+type Jitter interface {
+	// Duration returns the random variance to add to the latency.
+	Duration() time.Duration
+}
 
-// LatencyGenerator calculates the loss for a packet.
-type LossGenerator interface{ Generate() float64 }
+// Loss determines if a packet is to be dropped.
+type Loss interface {
+	// Drop returns true if the current packet should be discarded.
+	Drop() bool
+}
 
 // LatencyFunc enables a simple function to satisfy LatencyGenerator.
 type LatencyFunc func() time.Duration
