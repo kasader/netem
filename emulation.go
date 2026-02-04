@@ -92,6 +92,38 @@ type Loss interface {
 	Drop() bool
 }
 
+// LossFunc enables a simple function to satisfy the [Loss] interface.
+type LossFunc func() bool
+
+func (f LossFunc) Drop() bool { return f() }
+
+// StaticLoss returns a datagram drop decision via a static loss rate.
+//
+// TODO:
+func StaticLoss(f float64) Loss {
+	return LossFunc(func() bool {
+		panic("not implemented yet")
+		// return d
+	})
+}
+
+// LossVar is a thread-safe, mutable [Loss] provider.
+// It allows you to change the loss rate of a running simulation.
+type LossVar struct {
+	// We store our loss rate (f64) within an [atomic.Uint64].
+	// see: https://github.com/golang/go/issues/21996
+	val atomic.Uint64
+}
+
+// Set updates the loss rate safely.
+func (v *LossVar) Set(loss float64) { v.val.Store(math.Float64bits(loss)) }
+
+// Duration implements the [Latency] interface.
+func (v *LossVar) Drop() bool {
+	panic("not implemented yet")
+	// math.Float64frombits(v.val.Load())
+}
+
 // --- Fault
 
 // Fault models the stability of a connection.
@@ -99,11 +131,3 @@ type Fault interface {
 	// ShouldClose returns true if the connection should be severed abruptly.
 	ShouldClose() bool
 }
-
-type LossVar struct {
-	// See: https://github.com/golang/go/issues/21996
-	val atomic.Uint64
-}
-
-func (v *LossVar) Set(loss float64) { v.val.Store(math.Float64bits(loss)) }
-func (v *LossVar) Loss() float64    { return math.Float64frombits(v.val.Load()) }
