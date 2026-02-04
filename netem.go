@@ -5,10 +5,42 @@ package netem
 
 import (
 	"net"
+	"sync"
 	"time"
 )
 
+// ConfigurationVar is a [Configuration] variable, to allow an emulated
+// connection to change dynamically.
+//
+// It implements [...] as well as Set methods, and it is safe for use by
+// multiple goroutines. The zero value corresponds to [...].
+type ConfigurationVar struct {
+	mu  sync.RWMutex
+	cfg *Configuration
+}
+
+type Configuration struct {
+	Bandwidth      uint64
+	LatencyTime    time.Duration
+	JitterTime     time.Duration
+	PacketLossRate float64
+}
+
 // --- [net.PacketConn] implementation
+
+type Options struct {
+	Bandwidth Bandwidther
+	Latency   Latencyer
+	Jitter    Jitterer
+	Loss      Losser
+}
+
+func NewPacketConn(c net.PacketConn, opts *Options) net.PacketConn {
+	v := &PacketConn{
+		PacketConn: c,
+	}
+	panic("unimplemented")
+}
 
 type PacketConn struct {
 	net.PacketConn
