@@ -9,42 +9,48 @@ import (
 	"time"
 )
 
-// ConfigurationVar is a [Configuration] variable, to allow an emulated
+// ConfigurationVar is a [config] variable, to allow an emulated
 // connection to change dynamically.
 //
 // It implements [...] as well as Set methods, and it is safe for use by
 // multiple goroutines. The zero value corresponds to [...].
 type ConfigurationVar struct {
 	mu  sync.RWMutex
-	cfg *Configuration
+	cfg *config
 }
 
-type Configuration struct {
-	Bandwidth      uint64
-	LatencyTime    time.Duration
-	JitterTime     time.Duration
-	PacketLossRate float64
+type config struct {
+	bandwidth uint64 // bits per second, 0 = infinite
+	latency   time.Duration
+	jitter    time.Duration
+	lossRate  float64
+}
+
+func defaultConfig() *config {
+	return &config{
+		latency:   0,
+		jitter:    0,
+		lossRate:  0,
+		bandwidth: 0,
+	}
 }
 
 // --- [net.PacketConn] implementation
 
-type Options struct {
-	Bandwidth BandwidthProvider
-	Latency   LatencyProvider
-	Jitter    JitterProvider
-	Loss      LossProvider
-}
-
-func NewPacketConn(c net.PacketConn, opts *Options) net.PacketConn {
-	v := &PacketConn{
-		PacketConn: c,
+func NewPacketConn(c net.PacketConn, opts ...Option) net.PacketConn {
+	cfg := defaultConfig()
+	for _, opt := range opts {
+		opt(cfg)
 	}
-	panic("unimplemented")
+	return &PacketConn{
+		PacketConn: c,
+		config:     cfg,
+	}
 }
 
 type PacketConn struct {
 	net.PacketConn
-	// ...
+	config *config
 }
 
 // Close implements net.PacketConn.
