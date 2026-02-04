@@ -36,15 +36,8 @@ func defaultConfig() *Config {
 
 // --- [net.PacketConn] implementation
 
-func NewPacketConn(c net.PacketConn, opts ...Option) net.PacketConn {
-	cfg := defaultConfig()
-	for _, opt := range opts {
-		opt(cfg)
-	}
-	return &PacketConn{
-		PacketConn: c,
-		config:     cfg,
-	}
+func NewPacketConn(c net.PacketConn, p PacketProfile) net.PacketConn {
+	panic("unimplemented")
 }
 
 type PacketConn struct {
@@ -94,6 +87,10 @@ var _ net.PacketConn = (*PacketConn)(nil)
 type Conn struct {
 	net.Conn
 	// ...
+}
+
+func NewConn(c net.Conn, p StreamProfile) net.Conn {
+	panic("unimplemented")
 }
 
 // Close implements net.Conn.
