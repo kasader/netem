@@ -2,26 +2,41 @@ package netem
 
 import (
 	"net"
+	"sync"
 	"time"
 )
 
 // --- [net.PacketConn] implementation
 
 func NewPacketConn(c net.PacketConn, p PacketProfile) net.PacketConn {
-	panic("unimplemented")
+	return &PacketConn{
+		PacketConn: c,
+		p:          p,
+
+		stopCh: make(chan struct{}),
+	}
 }
 
 type PacketConn struct {
 	net.PacketConn
+	p PacketProfile
+
+	stopOnce sync.Once
+	stopCh   chan struct{}
 }
 
 // Close implements net.PacketConn.
-func (p *PacketConn) Close() error {
-	panic("unimplemented")
+func (c *PacketConn) Close() error {
+	c.stopOnce.Do(func() {
+		if c.stopCh != nil {
+			close(c.stopCh)
+		}
+	})
+	return c.PacketConn.Close()
 }
 
 // LocalAddr implements net.PacketConn.
-func (p *PacketConn) LocalAddr() net.Addr {
+func (c *PacketConn) LocalAddr() net.Addr {
 	panic("unimplemented")
 }
 
@@ -31,17 +46,17 @@ func (*PacketConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
 }
 
 // SetDeadline implements net.PacketConn.
-func (p *PacketConn) SetDeadline(t time.Time) error {
+func (c *PacketConn) SetDeadline(t time.Time) error {
 	panic("unimplemented")
 }
 
 // SetReadDeadline implements net.PacketConn.
-func (p *PacketConn) SetReadDeadline(t time.Time) error {
+func (c *PacketConn) SetReadDeadline(t time.Time) error {
 	panic("unimplemented")
 }
 
 // SetWriteDeadline implements net.PacketConn.
-func (p *PacketConn) SetWriteDeadline(t time.Time) error {
+func (c *PacketConn) SetWriteDeadline(t time.Time) error {
 	panic("unimplemented")
 }
 

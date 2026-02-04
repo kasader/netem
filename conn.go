@@ -2,6 +2,7 @@ package netem
 
 import (
 	"net"
+	"sync"
 	"time"
 )
 
@@ -9,16 +10,29 @@ import (
 
 type Conn struct {
 	net.Conn
-	// ...
+	p StreamProfile
+
+	stopOnce sync.Once
+	stopCh   chan struct{}
 }
 
 func NewConn(c net.Conn, p StreamProfile) net.Conn {
-	panic("unimplemented")
+	return &Conn{
+		Conn: c,
+		p:    p,
+
+		stopCh: make(chan struct{}),
+	}
 }
 
 // Close implements net.Conn.
 func (c *Conn) Close() error {
-	panic("unimplemented")
+	c.stopOnce.Do(func() {
+		if c.stopCh != nil {
+			close(c.stopCh)
+		}
+	})
+	return c.Conn.Close()
 }
 
 // LocalAddr implements net.Conn.
