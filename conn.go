@@ -1,0 +1,59 @@
+package netem
+
+import (
+	"net"
+	"time"
+)
+
+// --- [net.Conn] implementation
+
+type Conn struct {
+	net.Conn
+	// ...
+}
+
+func NewConn(c net.Conn, p StreamProfile) net.Conn {
+	panic("unimplemented")
+}
+
+// Close implements net.Conn.
+func (c *Conn) Close() error {
+	panic("unimplemented")
+}
+
+// LocalAddr implements net.Conn.
+func (c *Conn) LocalAddr() net.Addr {
+	panic("unimplemented")
+}
+
+// Read implements net.Conn.
+func (c *Conn) Read(b []byte) (n int, err error) {
+	panic("unimplemented")
+}
+
+// RemoteAddr implements net.Conn.
+func (c *Conn) RemoteAddr() net.Addr {
+	panic("unimplemented")
+}
+
+// SetDeadline implements net.Conn.
+func (c *Conn) SetDeadline(t time.Time) error {
+	panic("unimplemented")
+}
+
+// SetReadDeadline implements net.Conn.
+func (c *Conn) SetReadDeadline(t time.Time) error {
+	panic("unimplemented")
+}
+
+// SetWriteDeadline implements net.Conn.
+func (c *Conn) SetWriteDeadline(t time.Time) error {
+	panic("unimplemented")
+}
+
+// Write implements net.Conn.
+func (c *Conn) Write(b []byte) (n int, err error) {
+	panic("unimplemented")
+}
+
+var _ net.Conn = (*Conn)(nil)
