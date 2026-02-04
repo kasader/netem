@@ -6,11 +6,33 @@ import (
 	"time"
 )
 
+// --- Bandwidth
+
 // Bandwidth models the capacity of the link.
 type Bandwidth interface {
 	// Limit returns the allowed throughput in bits per second.
 	Limit() uint64
 }
+
+// BandwidthFunc enables a simple function to satisfy the [Bandwidth] interface.
+type BandwidthFunc func() uint64
+
+func (f BandwidthFunc) Limit() uint64 { return f() }
+
+// StaticBandwidth returns a constant throughput.
+func StaticBandwidth(bps uint64) Bandwidth { return BandwidthFunc(func() uint64 { return bps }) }
+
+// BandwidthVar is a thread-safe, mutable [Bandwidth] provider.
+// It allows you to change the bandwidth of a running simulation.
+type BandwidthVar struct{ val atomic.Uint64 }
+
+// Set updates the bandwidth safely.
+func (v *BandwidthVar) Set(bandwidth uint64) { v.val.Store(bandwidth) }
+
+// Limit implements the [Bandwidth] interface.
+func (v *BandwidthVar) Limit() uint64 { return v.val.Load() }
+
+// --- Latency
 
 // Latency models the delay of a network transmission.
 type Latency interface {
@@ -28,9 +50,7 @@ func StaticLatency(d time.Duration) Latency { return LatencyFunc(func() time.Dur
 
 // LatencyVar is a thread-safe, mutable [Latency] provider.
 // It allows you to change the latency of a running simulation.
-type LatencyVar struct {
-	val atomic.Int64
-}
+type LatencyVar struct{ val atomic.Int64 }
 
 // Set updates the latency safely.
 func (v *LatencyVar) Set(latency time.Duration) { v.val.Store(int64(latency)) }
@@ -38,11 +58,33 @@ func (v *LatencyVar) Set(latency time.Duration) { v.val.Store(int64(latency)) }
 // Duration implements the [Latency] interface.
 func (v *LatencyVar) Duration() time.Duration { return time.Duration(v.val.Load()) }
 
+// --- Jitter
+
 // Jitter models the variance in transmission delay.
 type Jitter interface {
 	// Duration returns the random variance to add to the latency.
 	Duration() time.Duration
 }
+
+// JitterFunc enables a simple function to satisfy the [Jitter] interface.
+type JitterFunc func() time.Duration
+
+func (f JitterFunc) Duration() time.Duration { return f() }
+
+// StaticJitter returns a constant jitter variance.
+func StaticJitter(d time.Duration) Jitter { return JitterFunc(func() time.Duration { return d }) }
+
+// JitterVar is a thread-safe, mutable [Jitter] provider.
+// It allows you to change the jitter of a running simulation.
+type JitterVar struct{ val atomic.Int64 }
+
+// Set updates the jitter safely.
+func (v *JitterVar) Set(d time.Duration) { v.val.Store(int64(d)) }
+
+// Duration implements the [Latency] interface.
+func (v *JitterVar) Duration() time.Duration { return time.Duration(v.val.Load()) }
+
+// --- Loss
 
 // Loss models the unreliability of a datagram link.
 type Loss interface {
@@ -50,25 +92,13 @@ type Loss interface {
 	Drop() bool
 }
 
+// --- Fault
+
 // Fault models the stability of a connection.
 type Fault interface {
 	// ShouldClose returns true if the connection should be severed abruptly.
 	ShouldClose() bool
 }
-
-type BandwidthVar struct {
-	val atomic.Uint64
-}
-
-func (v *BandwidthVar) Set(bandwidth uint64) { v.val.Store(bandwidth) }
-func (v *BandwidthVar) Bandwidth() uint64    { return v.val.Load() }
-
-type JitterVar struct {
-	val atomic.Value
-}
-
-func (v *JitterVar) Set(jitter time.Duration) { v.val.Store(jitter) }
-func (v *JitterVar) Jitter() time.Duration    { return v.val.Load().(time.Duration) }
 
 type LossVar struct {
 	// See: https://github.com/golang/go/issues/21996
