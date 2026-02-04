@@ -10,7 +10,11 @@ import (
 
 type Conn struct {
 	net.Conn
-	p StreamProfile
+	p          StreamProfile
+	headerSize int
+
+	mu         sync.Mutex
+	throttleMu sync.Mutex
 
 	stopOnce sync.Once
 	stopCh   chan struct{}
@@ -18,8 +22,9 @@ type Conn struct {
 
 func NewConn(c net.Conn, p StreamProfile) net.Conn {
 	return &Conn{
-		Conn: c,
-		p:    p,
+		Conn:       c,
+		p:          p,
+		headerSize: getHeaderSize(c.LocalAddr()),
 
 		stopCh: make(chan struct{}),
 	}
@@ -67,7 +72,41 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 
 // Write implements net.Conn.
 func (c *Conn) Write(b []byte) (n int, err error) {
-	panic("unimplemented")
+	select {
+	case <-c.stopCh:
+		return c.Conn.Write(b)
+	default:
+		// don't block on non-closed stopCh
+	}
+
+	// Since we return immediately, we must copy the data to own it.
+	// Otherwise, the caller might modify 'b' while our goroutine is sleeping.
+	data := make([]byte, len(b))
+	copy(data, b)
+
+	go func() {
+		// Serialization Delay (Bandwidth)
+		if c.p.Bandwidth != nil {
+			limit := c.p.Bandwidth.Limit()
+			if limit != 0 {
+				delay := transmissionTime(limit, len(data), c.headerSize)
+				c.throttleMu.Lock()
+				time.Sleep(delay)
+				c.throttleMu.Unlock()
+			}
+		}
+		// Fault Injection (Fault)
+		if c.p.Fault != nil && c.p.Fault.ShouldClose() {
+			c.Close() // simulate abrupt connection drop
+			return
+		}
+		// Propagation delay (Latency + Jitter)
+		if d := delayTime(c.p.Latency, c.p.Jitter); d != 0 {
+			time.Sleep(d)
+		}
+		_, _ = c.Conn.Write(b)
+	}()
+	return len(b), nil
 }
 
 var _ net.Conn = (*Conn)(nil)

@@ -12,6 +12,7 @@ func NewPacketConn(c net.PacketConn, p PacketProfile) net.PacketConn {
 	return &PacketConn{
 		PacketConn: c,
 		p:          p,
+		headerSize: getHeaderSize(c.LocalAddr()),
 
 		stopCh: make(chan struct{}),
 	}
@@ -19,7 +20,8 @@ func NewPacketConn(c net.PacketConn, p PacketProfile) net.PacketConn {
 
 type PacketConn struct {
 	net.PacketConn
-	p PacketProfile
+	p          PacketProfile
+	headerSize int
 
 	stopOnce sync.Once
 	stopCh   chan struct{}
