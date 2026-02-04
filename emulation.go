@@ -6,28 +6,34 @@ import (
 	"time"
 )
 
-// Bandwidth provides the bandwidth limit for a connection.
+// Bandwidth models the capacity of the link.
 type Bandwidth interface {
-	// Limit returns the current allowed bits per second.
+	// Limit returns the allowed throughput in bits per second.
 	Limit() uint64
 }
 
-// Latency provides the latency for a packet.
+// Latency models the delay of a network transmission.
 type Latency interface {
-	// Duration returns how long the current packet should be delayed.
+	// Duration returns the delay for the current operation.
 	Duration() time.Duration
 }
 
-// Jitter provides the jitter for a packet.
+// Jitter models the variance in transmission delay.
 type Jitter interface {
 	// Duration returns the random variance to add to the latency.
 	Duration() time.Duration
 }
 
-// Loss determines if a packet is to be dropped.
+// Loss models the unreliability of a datagram link.
 type Loss interface {
-	// Drop returns true if the current packet should be discarded.
+	// Drop returns true if the current datagram should be discarded.
 	Drop() bool
+}
+
+// Fault models the stability of a connection.
+type Fault interface {
+	// ShouldClose returns true if the connection should be severed abruptly.
+	ShouldClose() bool
 }
 
 // LatencyFunc enables a simple function to satisfy LatencyGenerator.
