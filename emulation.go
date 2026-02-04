@@ -6,13 +6,24 @@ import (
 	"time"
 )
 
-type BandwidthProvider interface{ Bandwidth() uint64 }
+// LatencyGenerator calculates the bandwidth for a packet.
+type BandwidthGenerator interface{ Generate() uint64 }
 
-type LatencyProvider interface{ Latency() time.Duration }
+// LatencyGenerator calculates the latency for a packet.
+type LatencyGenerator interface{ Generate() time.Duration }
 
-type JitterProvider interface{ Jitter() time.Duration }
+// JitterGenerator calculates the jitter for a packet.
+type JitterGenerator interface{ Generate() time.Duration }
 
-type LossProvider interface{ Loss() float64 }
+// LatencyGenerator calculates the loss for a packet.
+type LossGenerator interface{ Generate() float64 }
+
+// LatencyFunc enables a simple function to satisfy LatencyGenerator.
+type LatencyFunc func() time.Duration
+
+func (f LatencyFunc) Generate() time.Duration {
+	return f()
+}
 
 type BandwidthVar struct {
 	val atomic.Uint64
@@ -21,12 +32,17 @@ type BandwidthVar struct {
 func (v *BandwidthVar) Set(bandwidth uint64) { v.val.Store(bandwidth) }
 func (v *BandwidthVar) Bandwidth() uint64    { return v.val.Load() }
 
+// LatencyVar is a thread-safe, mutable LatencyGenerator.
+// It allows you to change the latency of a running simulation.
 type LatencyVar struct {
-	val atomic.Value
+	val atomic.Int64
 }
 
-func (v *LatencyVar) Set(latency time.Duration) { v.val.Store(latency) }
-func (v *LatencyVar) Latency() time.Duration    { return v.val.Load().(time.Duration) }
+// Set updates the latency safely.
+func (v *LatencyVar) Set(latency time.Duration) { v.val.Store(int64(latency)) }
+
+// Generate implements LatencyGenerator.
+func (v *LatencyVar) Generate() time.Duration { return time.Duration(v.val.Load()) }
 
 type JitterVar struct {
 	val atomic.Value

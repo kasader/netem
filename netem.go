@@ -16,22 +16,21 @@ import (
 // multiple goroutines. The zero value corresponds to [...].
 type ConfigurationVar struct {
 	mu  sync.RWMutex
-	cfg *config
+	cfg *Config
 }
 
-type config struct {
-	bandwidth uint64 // bits per second, 0 = infinite
-	latency   time.Duration
-	jitter    time.Duration
-	lossRate  float64
+type Config struct {
+	Jitter  JitterGenerator
+	Latency LatencyGenerator
+
+	Bandwidth uint64 // bits per second, 0 = infinite
+	LossRate  float64
 }
 
-func defaultConfig() *config {
-	return &config{
-		latency:   0,
-		jitter:    0,
-		lossRate:  0,
-		bandwidth: 0,
+func defaultConfig() *Config {
+	return &Config{
+		LossRate:  0,
+		Bandwidth: 0,
 	}
 }
 
@@ -50,7 +49,7 @@ func NewPacketConn(c net.PacketConn, opts ...Option) net.PacketConn {
 
 type PacketConn struct {
 	net.PacketConn
-	config *config
+	config *Config
 }
 
 // Close implements net.PacketConn.
