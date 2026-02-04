@@ -9,12 +9,16 @@ type LinkProfile struct {
 
 // PacketProfile extends the link with datagram-specific behaviors.
 type PacketProfile struct {
-	LinkProfile
-	Loss Loss
+	Latency   Latency
+	Jitter    Jitter
+	Bandwidth Bandwidth
+	Loss      Loss
 }
 
 // StreamProfile extends the link with stream-specific behaviors.
 type StreamProfile struct {
-	LinkProfile
-	Fault Fault
+	Latency   Latency
+	Jitter    Jitter
+	Bandwidth Bandwidth
+	Fault     Fault
 }

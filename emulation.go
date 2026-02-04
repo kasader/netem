@@ -18,6 +18,26 @@ type Latency interface {
 	Duration() time.Duration
 }
 
+// LatencyFunc enables a simple function to satisfy the [Latency] interface.
+type LatencyFunc func() time.Duration
+
+func (f LatencyFunc) Duration() time.Duration { return f() }
+
+// StaticLatency returns a constant delay.
+func StaticLatency(d time.Duration) Latency { return LatencyFunc(func() time.Duration { return d }) }
+
+// LatencyVar is a thread-safe, mutable [Latency] provider.
+// It allows you to change the latency of a running simulation.
+type LatencyVar struct {
+	val atomic.Int64
+}
+
+// Set updates the latency safely.
+func (v *LatencyVar) Set(latency time.Duration) { v.val.Store(int64(latency)) }
+
+// Duration implements the [Latency] interface.
+func (v *LatencyVar) Duration() time.Duration { return time.Duration(v.val.Load()) }
+
 // Jitter models the variance in transmission delay.
 type Jitter interface {
 	// Duration returns the random variance to add to the latency.
@@ -36,31 +56,12 @@ type Fault interface {
 	ShouldClose() bool
 }
 
-// LatencyFunc enables a simple function to satisfy LatencyGenerator.
-type LatencyFunc func() time.Duration
-
-func (f LatencyFunc) Generate() time.Duration {
-	return f()
-}
-
 type BandwidthVar struct {
 	val atomic.Uint64
 }
 
 func (v *BandwidthVar) Set(bandwidth uint64) { v.val.Store(bandwidth) }
 func (v *BandwidthVar) Bandwidth() uint64    { return v.val.Load() }
-
-// LatencyVar is a thread-safe, mutable LatencyGenerator.
-// It allows you to change the latency of a running simulation.
-type LatencyVar struct {
-	val atomic.Int64
-}
-
-// Set updates the latency safely.
-func (v *LatencyVar) Set(latency time.Duration) { v.val.Store(int64(latency)) }
-
-// Generate implements LatencyGenerator.
-func (v *LatencyVar) Generate() time.Duration { return time.Duration(v.val.Load()) }
 
 type JitterVar struct {
 	val atomic.Value
