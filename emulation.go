@@ -2,6 +2,7 @@ package netem
 
 import (
 	"math"
+	"math/rand/v2"
 	"sync/atomic"
 	"time"
 )
@@ -97,18 +98,18 @@ type LossFunc func() bool
 
 func (f LossFunc) Drop() bool { return f() }
 
-// StaticLoss returns a datagram drop decision via a static loss rate.
-//
-// TODO:
-func StaticLoss(f float64) Loss {
-	return LossFunc(func() bool {
-		panic("not implemented yet")
-		// return d
-	})
+// RandomLoss returns a function that drops datagrams with probability rate (0.0 to 1.0).
+func RandomLoss(rate float64) LossFunc {
+	return func() bool {
+		return rand.Float64() < rate
+	}
 }
 
 // LossVar is a thread-safe, mutable [Loss] provider.
-// It allows you to change the loss rate of a running simulation.
+// It allows you to change the random loss rate of a running simulation.
+//
+// Uses the [RandomLoss] policy. For other policies, please implement a
+// custom LossVar implementation.
 type LossVar struct {
 	// We store our loss rate (f64) within an [atomic.Uint64].
 	// see: https://github.com/golang/go/issues/21996
@@ -116,12 +117,12 @@ type LossVar struct {
 }
 
 // Set updates the loss rate safely.
-func (v *LossVar) Set(loss float64) { v.val.Store(math.Float64bits(loss)) }
+func (v *LossVar) Set(rate float64) { v.val.Store(math.Float64bits(rate)) }
 
-// Duration implements the [Latency] interface.
+// Duration implements the [Loss] interface.
 func (v *LossVar) Drop() bool {
-	panic("not implemented yet")
-	// math.Float64frombits(v.val.Load())
+	rate := math.Float64frombits(v.val.Load())
+	return RandomLoss(rate)()
 }
 
 // --- Fault
@@ -130,4 +131,34 @@ func (v *LossVar) Drop() bool {
 type Fault interface {
 	// ShouldClose returns true if the connection should be severed abruptly.
 	ShouldClose() bool
+}
+
+// FaultFunc enables a simple function to satisfy the [Fault] interface.
+type FaultFunc func() bool
+
+func (f FaultFunc) ShouldClose() bool { return f() }
+
+// RandomFault returns a function that closes connections with probability rate (0.0 to 1.0).
+func RandomClose(rate float64) FaultFunc {
+	return func() bool {
+		return rand.Float64() < rate
+	}
+}
+
+// FaultVar is a thread-safe, mutable [Fault] provider.
+// It allows you to change the random fault rate of a running simulation.
+//
+// Uses the [RandomClose] policy. For other policies, please implement a
+// custom FaultVar implementation.
+type FaultVar struct {
+	val atomic.Uint64
+}
+
+// Set updates the fault rate safely.
+func (v *FaultVar) Set(rate float64) { v.val.Store(math.Float64bits(rate)) }
+
+// Duration implements the [Fault] interface.
+func (v *FaultVar) Drop() bool {
+	rate := math.Float64frombits(v.val.Load())
+	return RandomLoss(rate)()
 }
