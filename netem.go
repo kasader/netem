@@ -29,10 +29,10 @@ type Configuration struct {
 // --- [net.PacketConn] implementation
 
 type Options struct {
-	Bandwidth Bandwidther
-	Latency   Latencyer
-	Jitter    Jitterer
-	Loss      Losser
+	Bandwidth BandwidthProvider
+	Latency   LatencyProvider
+	Jitter    JitterProvider
+	Loss      LossProvider
 }
 
 func NewPacketConn(c net.PacketConn, opts *Options) net.PacketConn {

@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-type Bandwidther interface{ Bandwidth() uint64 }
+type BandwidthProvider interface{ Bandwidth() uint64 }
 
-type Latencyer interface{ Latency() time.Duration }
+type LatencyProvider interface{ Latency() time.Duration }
 
-type Jitterer interface{ Jitter() time.Duration }
+type JitterProvider interface{ Jitter() time.Duration }
 
-type Losser interface{ Loss() float64 }
+type LossProvider interface{ Loss() float64 }
 
 type BandwidthVar struct {
 	val atomic.Uint64
