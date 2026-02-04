@@ -3,4 +3,100 @@
 // of connection bandwidth, latency, jitter, and packet loss via indirection.
 package netem
 
-import _ "net"
+import (
+	"net"
+	"time"
+)
+
+// --- [net.PacketConn] implementation
+
+type PacketConn struct {
+	net.PacketConn
+	// ...
+}
+
+// Close implements net.PacketConn.
+func (p *PacketConn) Close() error {
+	panic("unimplemented")
+}
+
+// LocalAddr implements net.PacketConn.
+func (p *PacketConn) LocalAddr() net.Addr {
+	panic("unimplemented")
+}
+
+// ReadFrom implements net.PacketConn.
+func (*PacketConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
+	panic("unimplemented")
+}
+
+// SetDeadline implements net.PacketConn.
+func (p *PacketConn) SetDeadline(t time.Time) error {
+	panic("unimplemented")
+}
+
+// SetReadDeadline implements net.PacketConn.
+func (p *PacketConn) SetReadDeadline(t time.Time) error {
+	panic("unimplemented")
+}
+
+// SetWriteDeadline implements net.PacketConn.
+func (p *PacketConn) SetWriteDeadline(t time.Time) error {
+	panic("unimplemented")
+}
+
+// WriteTo implements net.PacketConn.
+func (*PacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
+	panic("unimplemented")
+}
+
+var _ net.PacketConn = (*PacketConn)(nil)
+
+// --- [net.Conn] implementation
+
+type Conn struct {
+	net.Conn
+	// ...
+}
+
+// Close implements net.Conn.
+func (c *Conn) Close() error {
+	panic("unimplemented")
+}
+
+// LocalAddr implements net.Conn.
+func (c *Conn) LocalAddr() net.Addr {
+	panic("unimplemented")
+}
+
+// Read implements net.Conn.
+func (c *Conn) Read(b []byte) (n int, err error) {
+	panic("unimplemented")
+}
+
+// RemoteAddr implements net.Conn.
+func (c *Conn) RemoteAddr() net.Addr {
+	panic("unimplemented")
+}
+
+// SetDeadline implements net.Conn.
+func (c *Conn) SetDeadline(t time.Time) error {
+	panic("unimplemented")
+}
+
+// SetReadDeadline implements net.Conn.
+func (c *Conn) SetReadDeadline(t time.Time) error {
+	panic("unimplemented")
+}
+
+// SetWriteDeadline implements net.Conn.
+func (c *Conn) SetWriteDeadline(t time.Time) error {
+	panic("unimplemented")
+}
+
+// Write implements net.Conn.
+func (c *Conn) Write(b []byte) (n int, err error) {
+	panic("unimplemented")
+}
+
+var _ net.Conn = (*Conn)(nil)
