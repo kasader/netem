@@ -8,8 +8,10 @@ import (
 
 // --- [net.Conn] implementation
 
+// Conn TODO: insert docs.
 type Conn struct {
 	net.Conn
+
 	p          StreamProfile
 	headerSize int
 
@@ -20,6 +22,7 @@ type Conn struct {
 	stopCh   chan struct{}
 }
 
+// NewConn TODO: insert docs.
 func NewConn(c net.Conn, p StreamProfile) net.Conn {
 	return &Conn{
 		Conn:       c,
@@ -47,6 +50,7 @@ func (c *Conn) LocalAddr() net.Addr {
 
 // Read implements net.Conn.
 func (c *Conn) Read(b []byte) (n int, err error) {
+	_ = b
 	panic("unimplemented")
 }
 
@@ -57,21 +61,25 @@ func (c *Conn) RemoteAddr() net.Addr {
 
 // SetDeadline implements net.Conn.
 func (c *Conn) SetDeadline(t time.Time) error {
+	_ = t
 	panic("unimplemented")
 }
 
 // SetReadDeadline implements net.Conn.
 func (c *Conn) SetReadDeadline(t time.Time) error {
+	_ = t
 	panic("unimplemented")
 }
 
 // SetWriteDeadline implements net.Conn.
 func (c *Conn) SetWriteDeadline(t time.Time) error {
+	_ = t
 	panic("unimplemented")
 }
 
 // Write implements net.Conn.
 func (c *Conn) Write(b []byte) (n int, err error) {
+	_ = b
 	select {
 	case <-c.stopCh:
 		return c.Conn.Write(b)
