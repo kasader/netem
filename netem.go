@@ -12,6 +12,13 @@ const (
 	IPv6HeaderSize = 40
 )
 
+// LinkProfile defines the shared physical properties of a network link.
+type LinkProfile struct {
+	Latency   Latency
+	Jitter    Jitter
+	Bandwidth Bandwidth
+}
+
 func getHeaderSize(addr net.Addr) int {
 	var ip net.IP
 	switch v := addr.(type) {

@@ -6,7 +6,13 @@ import (
 	"time"
 )
 
-// --- [net.PacketConn] implementation
+// PacketProfile extends the link with datagram-specific behaviors.
+type PacketProfile struct {
+	Latency   Latency
+	Jitter    Jitter
+	Bandwidth Bandwidth
+	Loss      Loss
+}
 
 // PacketConn TODO: insert doc.
 type PacketConn struct {

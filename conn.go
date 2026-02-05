@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+// StreamProfile extends the link with stream-specific behaviors.
+type StreamProfile struct {
+	Latency   Latency
+	Jitter    Jitter
+	Bandwidth Bandwidth
+	Fault     Fault
+}
+
 type writeReq struct {
 	data []byte
 	due  time.Time
