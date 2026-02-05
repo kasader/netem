@@ -9,7 +9,7 @@ import (
 // FaultFunc enables a simple function to satisfy the [Fault] interface.
 type FaultFunc func() bool
 
-// ShouldCloud implements the [Fault] interface.
+// ShouldClose implements the [Fault] interface.
 func (f FaultFunc) ShouldClose() bool { return f() }
 
 // RandomClose returns a function that closes connections with probability rate (0.0 to 1.0).
