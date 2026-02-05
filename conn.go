@@ -2,6 +2,7 @@ package netem
 
 import (
 	"net"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -86,7 +87,7 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 // Write implements net.Conn.
 func (c *Conn) Write(b []byte) (n int, err error) {
 	if c.isWriteDeadline() {
-		return c.Conn.Write(b)
+		return 0, os.ErrDeadlineExceeded
 	}
 	// 1. Calculate packet delays immediately.
 	serializationDelay := transmissionTime(c.p.Bandwidth, len(b), c.headerSize)
