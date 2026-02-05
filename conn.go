@@ -29,16 +29,14 @@ type writeReq struct {
 
 type Conn struct {
 	net.Conn
-	p          StreamProfile
 	headerSize int
 	mss        int // maximum segment size
+	p          StreamProfile
 
 	writeCh       chan writeReq // FIFO queue
 	writeDeadline atomic.Value
 
-	mu sync.Mutex
-
-	throttleMu   sync.Mutex
+	mu           sync.Mutex
 	nextWireTime time.Time
 
 	stopOnce sync.Once
@@ -50,24 +48,21 @@ func NewConn(c net.Conn, p StreamProfile) net.Conn {
 	headerSize := getHeaderSize(c.LocalAddr())
 	mtu := p.MTU
 	if mtu == 0 {
-		mtu = 1500 //
+		mtu = EthernetDefaultMTU
 	}
-	mss := int(mtu) - headerSize
-	if mss < 1 {
-		mss = 1 // enforce minimum (prevent infinite loop)
-	}
+	// Enforce minimum mss (prevent infinite loop).
+	mss := max(1, int(mtu)-headerSize)
 
 	nc := &Conn{
-		Conn: c,
-		p:    p,
+		Conn:       c,
+		headerSize: headerSize,
+		mss:        mss,
+		p:          p,
 
 		// Buffered to allow bursting.
 		// TODO: Should the WriteCh length be configurable?
 		writeCh: make(chan writeReq, 1024),
 		stopCh:  make(chan struct{}),
-
-		mss:        mss,
-		headerSize: headerSize,
 	}
 	nc.writeDeadline.Store(time.Time{})
 	go nc.linkLoop()
@@ -158,8 +153,8 @@ func (c *Conn) isWriteDeadline() bool {
 // reserveWire calculates when a chunk of data will finish serializing on the wire.
 // It updates the virtual clock (nextWireTime) in a thread-safe manner.
 func (c *Conn) reserveWire(chunkSize int) time.Time {
-	c.throttleMu.Lock()
-	defer c.throttleMu.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	now := time.Now()
 	startTime := c.nextWireTime
