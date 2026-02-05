@@ -1,7 +1,9 @@
 package netem
 
 import (
+	"container/heap"
 	"net"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -110,6 +112,9 @@ func (c *PacketConn) SetWriteDeadline(t time.Time) error {
 
 // WriteTo implements net.PacketConn.
 func (c *PacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
+	if c.isWriteDeadline() {
+		return 0, os.ErrDeadlineExceeded
+	}
 	serializationDelay := transmissionTime(c.p.Bandwidth, len(p), c.headerSize)
 	propagationDelay := delayTime(c.p.Latency, c.p.Jitter)
 
@@ -140,5 +145,51 @@ func (c *PacketConn) isWriteDeadline() bool {
 
 // Handles writes in due order (scheduled).
 func (c *PacketConn) linkLoop() {
-	panic("not implemented yet")
+	pq := &packetHeap{}
+	heap.Init(pq)
+
+	// Create a timer but stop it immediately so it doesn't fire yet.
+	timer := time.NewTimer(0)
+	timer.Stop()
+
+	// Ensure we clean up the timer when the loop exits.
+	defer timer.Stop()
+	for {
+		select {
+		case <-c.stopCh:
+			return
+
+		case req := <-c.writeCh:
+			heap.Push(pq, req)
+			// Reset timer if this is the new head of the queue
+			if req.due.Equal((*pq)[0].due) {
+				timer.Reset(time.Until(req.due))
+			}
+
+		case <-timer.C:
+			if pq.Len() == 0 {
+				continue
+			}
+			now := time.Now()
+			for pq.Len() > 0 {
+				next := (*pq)[0]
+				if next.due.After(now) {
+					// Next packet is in the future.
+					// Reset timer for the remainder and go back to sleep.
+					timer.Reset(next.due.Sub(now))
+					break
+				}
+				packet := heap.Pop(pq).(packetReq)
+
+				// Apply loss policy.
+				drop := false
+				if c.p.Loss != nil {
+					drop = c.p.Loss.Drop()
+				}
+				if !drop {
+					c.PacketConn.WriteTo(packet.data, packet.addr)
+				}
+			}
+		}
+	}
 }
