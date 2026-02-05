@@ -11,4 +11,7 @@ test = "go test -v ./..."
 setup-precommit = "mise generate git-pre-commit --write --task=pre-commit"
 pre-commit = "mise r fmt && mise r test"                                   # Add in lint later
 
-init = "mise run setup-precommit"
+setup-ci = "mise generate github-action --write --task=ci"
+ci = "mise r fmt && mise r lint && mise r test"
+
+init = "mise run setup-precommit && mise run setup-ci"
