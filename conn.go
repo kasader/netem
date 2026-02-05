@@ -132,16 +132,16 @@ func (c *Conn) linkLoop() {
 		case <-c.stopCh:
 			return
 		case req := <-c.writeCh:
-			// 1. Perform fault injection before writing.
+			// Perform fault injection before writing.
 			if c.p.Fault != nil && c.p.Fault.ShouldClose() {
 				c.Close()
 			}
-			// 2. Wait until due time.
+			// Wait until due time.
 			wait := time.Until(req.due)
 			if wait > 0 {
 				time.Sleep(wait)
 			}
-			// 3. Write; and because we pull from the channel we can
+			// Write; and because we pull from the channel we can
 			// assume that our packets must be written in order.
 			c.Conn.Write(req.data)
 		}
