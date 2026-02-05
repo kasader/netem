@@ -4,14 +4,14 @@ golangci-lint = "2.8.0"
 
 [tasks]
 fmt = "golangci-lint fmt ./..."
-lint = "golangci-lint run ./..."
+test = "go test -v -race ./..."
 docs = "go doc -http"
-test = "go test -v ./..."
-
-setup-precommit = "mise generate git-pre-commit --write --task=pre-commit"
-pre-commit = "mise r fmt && mise r test"                                   # Add in lint later
-
-setup-ci = "mise generate github-action --write --task=ci"
-ci = "mise r fmt && mise r lint && mise r test"
+lint = "golangci-lint run ./..."
+lint-fast = "golangci-lint run --new-from-rev=HEAD~1 ./..."
 
 init = "mise run setup-precommit && mise run setup-ci"
+
+ci = { depends = ["fmt", "lint", "test"] }
+setup-ci = "mise generate github-action --write --task=ci"
+pre-commit = { depends = ["fmt", "lint-fast", "test"] }
+setup-precommit = "mise generate git-pre-commit --write --task=pre-commit"
