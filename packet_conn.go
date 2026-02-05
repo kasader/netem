@@ -3,11 +3,18 @@ package netem
 import (
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 // PacketProfile extends the link with datagram-specific behaviors.
 type PacketProfile struct {
+	// MTU (Maximum Transmission Unit) is the largest packet size allowed.
+	// This value includes L3/L4 headers.
+	//
+	// Defaults to [EthernetDefaultMTU] if 0.
+	MTU uint
+
 	Latency   Latency
 	Jitter    Jitter
 	Bandwidth Bandwidth
@@ -17,8 +24,11 @@ type PacketProfile struct {
 // PacketConn TODO: insert doc.
 type PacketConn struct {
 	net.PacketConn
-	p          PacketProfile
 	headerSize int
+	mss        int
+	p          PacketProfile
+
+	writeDeadline atomic.Value
 
 	stopOnce sync.Once
 	stopCh   chan struct{}
@@ -26,13 +36,24 @@ type PacketConn struct {
 
 // NewPacketConn TODO: insert doc.
 func NewPacketConn(c net.PacketConn, p PacketProfile) net.PacketConn {
-	return &PacketConn{
+	headerSize := getHeaderSize(c.LocalAddr())
+	mtu := p.MTU
+	if mtu == 0 {
+		mtu = EthernetDefaultMTU
+	}
+	// Enforce minimum mss.
+	mss := max(1, int(mtu)-headerSize)
+
+	nc := &PacketConn{
 		PacketConn: c,
-		p:          p,
 		headerSize: getHeaderSize(c.LocalAddr()),
+		mss:        mss,
+		p:          p,
 
 		stopCh: make(chan struct{}),
 	}
+	nc.writeDeadline.Store(time.Time{})
+	return nc
 }
 
 // Close implements net.PacketConn.
@@ -45,28 +66,16 @@ func (c *PacketConn) Close() error {
 	return c.PacketConn.Close()
 }
 
-// ReadFrom implements net.PacketConn.
-func (*PacketConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
-	_ = p
-	panic("unimplemented")
-}
-
 // SetDeadline implements net.PacketConn.
 func (c *PacketConn) SetDeadline(t time.Time) error {
-	_ = t
-	panic("unimplemented")
-}
-
-// SetReadDeadline implements net.PacketConn.
-func (c *PacketConn) SetReadDeadline(t time.Time) error {
-	_ = t
-	panic("unimplemented")
+	c.writeDeadline.Store(t)
+	return c.PacketConn.SetDeadline(t)
 }
 
 // SetWriteDeadline implements net.PacketConn.
 func (c *PacketConn) SetWriteDeadline(t time.Time) error {
-	_ = t
-	panic("unimplemented")
+	c.writeDeadline.Store(t)
+	return c.PacketConn.SetWriteDeadline(t)
 }
 
 // WriteTo implements net.PacketConn.
@@ -76,3 +85,8 @@ func (*PacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
 }
 
 var _ net.PacketConn = (*PacketConn)(nil)
+
+func (c *PacketConn) isWriteDeadline() bool {
+	wdl := c.writeDeadline.Load().(time.Time)
+	return !wdl.IsZero() && wdl.Before(time.Now())
+}
