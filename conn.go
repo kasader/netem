@@ -26,7 +26,6 @@ type Conn struct {
 	stopOnce sync.Once
 	stopCh   chan struct{}
 
-	readDeadline  atomic.Value
 	writeDeadline atomic.Value
 }
 
@@ -43,7 +42,6 @@ func NewConn(c net.Conn, p StreamProfile) net.Conn {
 
 		headerSize: getHeaderSize(c.LocalAddr()),
 	}
-	nc.readDeadline.Store(time.Time{})
 	nc.writeDeadline.Store(time.Time{})
 	go nc.linkLoop()
 	return nc
@@ -59,23 +57,10 @@ func (c *Conn) Close() error {
 	return c.Conn.Close()
 }
 
-// // Read implements net.Conn.
-// func (c *Conn) Read(b []byte) (n int, err error) {
-// 	_ = b
-// 	panic("unimplemented")
-// }
-
 // SetDeadline implements net.Conn.
 func (c *Conn) SetDeadline(t time.Time) error {
-	c.readDeadline.Store(t)
 	c.writeDeadline.Store(t)
 	return c.Conn.SetDeadline(t)
-}
-
-// SetReadDeadline implements net.Conn.
-func (c *Conn) SetReadDeadline(t time.Time) error {
-	c.readDeadline.Store(t)
-	return c.Conn.SetReadDeadline(t)
 }
 
 // SetWriteDeadline implements net.Conn.
@@ -133,11 +118,6 @@ func (c *Conn) linkLoop() {
 		}
 	}
 }
-
-// func (c *Conn) isReadDeadline() bool {
-// 	rdl := c.readDeadline.Load().(time.Time)
-// 	return !rdl.IsZero() && rdl.Before(time.Now())
-// }
 
 func (c *Conn) isWriteDeadline() bool {
 	wdl := c.writeDeadline.Load().(time.Time)
