@@ -10,6 +10,12 @@ import (
 
 // StreamProfile extends the link with stream-specific behaviors.
 type StreamProfile struct {
+	// MTU (Maximum Transmission Unit) is the largest packet size allowed.
+	// This value includes L3/L4 headers.
+	//
+	// Defaults to [EthernetDefaultMTU] if 0.
+	MTU uint
+
 	Latency   Latency
 	Jitter    Jitter
 	Bandwidth Bandwidth
@@ -25,20 +31,32 @@ type Conn struct {
 	net.Conn
 	p          StreamProfile
 	headerSize int
+	mss        int // maximum segment size
 
-	writeCh chan writeReq // FIFO queue
+	writeCh       chan writeReq // FIFO queue
+	writeDeadline atomic.Value
 
-	mu         sync.Mutex
-	throttleMu sync.Mutex
+	mu sync.Mutex
+
+	throttleMu   sync.Mutex
+	nextWireTime time.Time
 
 	stopOnce sync.Once
 	stopCh   chan struct{}
-
-	writeDeadline atomic.Value
 }
 
 // NewConn TODO: insert docs.
 func NewConn(c net.Conn, p StreamProfile) net.Conn {
+	headerSize := getHeaderSize(c.LocalAddr())
+	mtu := p.MTU
+	if mtu == 0 {
+		mtu = 1500 //
+	}
+	mss := int(mtu) - headerSize
+	if mss < 1 {
+		mss = 1 // enforce minimum (prevent infinite loop)
+	}
+
 	nc := &Conn{
 		Conn: c,
 		p:    p,
@@ -48,7 +66,8 @@ func NewConn(c net.Conn, p StreamProfile) net.Conn {
 		writeCh: make(chan writeReq, 1024),
 		stopCh:  make(chan struct{}),
 
-		headerSize: getHeaderSize(c.LocalAddr()),
+		mss:        mss,
+		headerSize: headerSize,
 	}
 	nc.writeDeadline.Store(time.Time{})
 	go nc.linkLoop()
@@ -82,24 +101,28 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 	if c.isWriteDeadline() {
 		return 0, os.ErrDeadlineExceeded
 	}
-	// 1. Calculate packet delays immediately.
-	serializationDelay := transmissionTime(c.p.Bandwidth, len(b), c.headerSize)
-	propagationDelay := delayTime(c.p.Latency, c.p.Jitter)
 
-	// 2. Schedule our packet using the calculated delay.
-	req := writeReq{
-		data: make([]byte, len(b)),
-		due:  time.Now().Add(serializationDelay + propagationDelay),
-	}
-	copy(req.data, b)
+	sent := 0
+	for sent < len(b) {
+		chunkSize := min(len(b), c.mss)
+		finishTime := c.reserveWire(chunkSize)
+		arrival := finishTime.Add(delayTime(c.p.Latency, c.p.Jitter))
+		req := writeReq{
+			data: make([]byte, len(b)),
+			due:  arrival,
+		}
+		copy(req.data, b)
 
-	// 3. Enqueue (and do a non-blocking check for stop).
-	select {
-	case <-c.stopCh:
-		return c.Conn.Write(b)
-	case c.writeCh <- req:
-		return len(b), nil
+		select {
+		case <-c.stopCh:
+			// simulation is stopped; flush out the remaining data immediately
+			nRaw, errRaw := c.Conn.Write(b[sent:])
+			return sent + nRaw, errRaw
+		case c.writeCh <- req:
+			sent += chunkSize
+		}
 	}
+	return sent, nil
 }
 
 var _ net.Conn = (*Conn)(nil)
@@ -130,4 +153,26 @@ func (c *Conn) linkLoop() {
 func (c *Conn) isWriteDeadline() bool {
 	wdl := c.writeDeadline.Load().(time.Time)
 	return !wdl.IsZero() && wdl.Before(time.Now())
+}
+
+// reserveWire calculates when a chunk of data will finish serializing on the wire.
+// It updates the virtual clock (nextWireTime) in a thread-safe manner.
+func (c *Conn) reserveWire(chunkSize int) time.Time {
+	c.throttleMu.Lock()
+	defer c.throttleMu.Unlock()
+
+	now := time.Now()
+	startTime := c.nextWireTime
+
+	// If the wire is idle, we start immediately.
+	// If the wire is busy, we queue behind the current transmission.
+	if startTime.Before(now) {
+		startTime = now
+	}
+
+	delay := transmissionTime(c.p.Bandwidth, chunkSize, c.headerSize)
+	finishTime := startTime.Add(delay)
+
+	c.nextWireTime = finishTime
+	return finishTime
 }

@@ -12,6 +12,16 @@ const (
 	IPv6HeaderSize = 40
 )
 
+const (
+	// WANs
+	EthernetDefaultMTU = 1_500
+	// datacenter
+	EthernetJumboFrameMTU = 9_000
+	// this is usually the MTU that is used for linux loopback devices.
+	// TODO: see if this is generalizable to other OSes.
+	IPMaximumMTU = 65_536
+)
+
 // LinkProfile defines the shared physical properties of a network link.
 type LinkProfile struct {
 	Latency   Latency
