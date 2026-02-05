@@ -54,6 +54,7 @@ type PacketConn struct {
 	mss        int
 	p          PacketProfile
 
+	writeCh       chan packetReq
 	writeDeadline atomic.Value
 
 	stopOnce sync.Once
@@ -76,9 +77,12 @@ func NewPacketConn(c net.PacketConn, p PacketProfile) net.PacketConn {
 		mss:        mss,
 		p:          p,
 
-		stopCh: make(chan struct{}),
+		// TODO: Should the WriteCh length be configurable?
+		writeCh: make(chan packetReq, 1024),
+		stopCh:  make(chan struct{}),
 	}
 	nc.writeDeadline.Store(time.Time{})
+	go nc.linkLoop()
 	return nc
 }
 
@@ -105,9 +109,26 @@ func (c *PacketConn) SetWriteDeadline(t time.Time) error {
 }
 
 // WriteTo implements net.PacketConn.
-func (*PacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
-	_, _ = p, addr
-	panic("unimplemented")
+func (c *PacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
+	serializationDelay := transmissionTime(c.p.Bandwidth, len(p), c.headerSize)
+	propagationDelay := delayTime(c.p.Latency, c.p.Jitter)
+
+	totalDelay := serializationDelay + propagationDelay
+	due := time.Now().Add(totalDelay)
+
+	req := packetReq{
+		data: make([]byte, len(p)),
+		addr: addr,
+		due:  due,
+	}
+	copy(req.data, p)
+
+	select {
+	case <-c.stopCh:
+		return c.PacketConn.WriteTo(p, addr)
+	case c.writeCh <- req:
+		return len(p), nil
+	}
 }
 
 var _ net.PacketConn = (*PacketConn)(nil)
@@ -115,4 +136,9 @@ var _ net.PacketConn = (*PacketConn)(nil)
 func (c *PacketConn) isWriteDeadline() bool {
 	wdl := c.writeDeadline.Load().(time.Time)
 	return !wdl.IsZero() && wdl.Before(time.Now())
+}
+
+// Handles writes in due order (scheduled).
+func (c *PacketConn) linkLoop() {
+	panic("not implemented yet")
 }
