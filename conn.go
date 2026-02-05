@@ -73,6 +73,9 @@ func NewConn(c net.Conn, p StreamProfile) net.Conn {
 func (c *Conn) Close() error {
 	c.stopOnce.Do(func() {
 		if c.stopCh != nil {
+			// TODO: if this channel is closed before we
+			// return from c.Conn.Close() we could fail
+			// to return an error in Write()
 			close(c.stopCh)
 		}
 	})
