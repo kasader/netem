@@ -89,12 +89,8 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 		return c.Conn.Write(b)
 	}
 	// 1. Calculate packet delays immediately.
-	var serializationDelay, propagationDelay time.Duration
-	limit := c.p.Bandwidth.Limit()
-	if limit != 0 {
-		serializationDelay = transmissionTime(limit, len(b), c.headerSize)
-	}
-	propagationDelay = delayTime(c.p.Latency, c.p.Jitter)
+	serializationDelay := transmissionTime(c.p.Bandwidth, len(b), c.headerSize)
+	propagationDelay := delayTime(c.p.Latency, c.p.Jitter)
 
 	// 2. Schedule our packet using the calculated delay.
 	req := writeReq{
