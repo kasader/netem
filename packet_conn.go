@@ -11,7 +11,6 @@ import (
 // PacketConn TODO: insert doc.
 type PacketConn struct {
 	net.PacketConn
-
 	p          PacketProfile
 	headerSize int
 
@@ -38,11 +37,6 @@ func (c *PacketConn) Close() error {
 		}
 	})
 	return c.PacketConn.Close()
-}
-
-// LocalAddr implements net.PacketConn.
-func (c *PacketConn) LocalAddr() net.Addr {
-	panic("unimplemented")
 }
 
 // ReadFrom implements net.PacketConn.

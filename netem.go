@@ -39,24 +39,31 @@ func getHeaderSize(addr net.Addr) int {
 	return overhead
 }
 
-func transmissionTime(bandwidth uint64, size, overhead int) time.Duration {
-	if bandwidth == 0 {
+func transmissionTime(bandwidth Bandwidth, size, overhead int) time.Duration {
+	if bandwidth == nil {
+		return 0
+	}
+	bps := bandwidth.Limit()
+	if bps == 0 {
 		return 0
 	}
 	// Convert byte-size to bit-size (we measure in bits/second).
 	totalBits := float64(size+overhead) * 8.0
 
-	seconds := totalBits / float64(bandwidth)
+	seconds := totalBits / float64(bps)
 	return time.Duration(seconds * float64(time.Second))
 }
 
 func delayTime(latency Latency, jitter Jitter) time.Duration {
-	var totalDelay time.Duration
+	var delay time.Duration
 	if latency != nil {
-		totalDelay += latency.Duration()
+		delay += latency.Duration()
 	}
 	if jitter != nil {
-		totalDelay += jitter.Duration()
+		delay += jitter.Duration()
 	}
-	return totalDelay
+	if delay < 0 {
+		delay = 0
+	}
+	return delay
 }

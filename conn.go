@@ -3,34 +3,49 @@ package netem
 import (
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
-// --- [net.Conn] implementation
+type writeReq struct {
+	data []byte
+	due  time.Time
+}
 
-// Conn TODO: insert docs.
 type Conn struct {
 	net.Conn
-
 	p          StreamProfile
 	headerSize int
+
+	writeCh chan writeReq // FIFO queue
 
 	mu         sync.Mutex
 	throttleMu sync.Mutex
 
 	stopOnce sync.Once
 	stopCh   chan struct{}
+
+	readDeadline  atomic.Value
+	writeDeadline atomic.Value
 }
 
 // NewConn TODO: insert docs.
 func NewConn(c net.Conn, p StreamProfile) net.Conn {
-	return &Conn{
-		Conn:       c,
-		p:          p,
-		headerSize: getHeaderSize(c.LocalAddr()),
+	nc := &Conn{
+		Conn: c,
+		p:    p,
 
-		stopCh: make(chan struct{}),
+		// Buffered to allow bursting.
+		// TODO: Should the WriteCh length be configurable?
+		writeCh: make(chan writeReq, 1024),
+		stopCh:  make(chan struct{}),
+
+		headerSize: getHeaderSize(c.LocalAddr()),
 	}
+	nc.readDeadline.Store(time.Time{})
+	nc.writeDeadline.Store(time.Time{})
+	go nc.linkLoop()
+	return nc
 }
 
 // Close implements net.Conn.
@@ -43,78 +58,91 @@ func (c *Conn) Close() error {
 	return c.Conn.Close()
 }
 
-// LocalAddr implements net.Conn.
-func (c *Conn) LocalAddr() net.Addr {
-	panic("unimplemented")
-}
-
-// Read implements net.Conn.
-func (c *Conn) Read(b []byte) (n int, err error) {
-	_ = b
-	panic("unimplemented")
-}
-
-// RemoteAddr implements net.Conn.
-func (c *Conn) RemoteAddr() net.Addr {
-	panic("unimplemented")
-}
+// // Read implements net.Conn.
+// func (c *Conn) Read(b []byte) (n int, err error) {
+// 	_ = b
+// 	panic("unimplemented")
+// }
 
 // SetDeadline implements net.Conn.
 func (c *Conn) SetDeadline(t time.Time) error {
-	_ = t
-	panic("unimplemented")
+	c.readDeadline.Store(t)
+	c.writeDeadline.Store(t)
+	return c.Conn.SetDeadline(t)
 }
 
 // SetReadDeadline implements net.Conn.
 func (c *Conn) SetReadDeadline(t time.Time) error {
-	_ = t
-	panic("unimplemented")
+	c.readDeadline.Store(t)
+	return c.Conn.SetReadDeadline(t)
 }
 
 // SetWriteDeadline implements net.Conn.
 func (c *Conn) SetWriteDeadline(t time.Time) error {
-	_ = t
-	panic("unimplemented")
+	c.writeDeadline.Store(t)
+	return c.Conn.SetWriteDeadline(t)
 }
 
 // Write implements net.Conn.
 func (c *Conn) Write(b []byte) (n int, err error) {
-	_ = b
+	if c.isWriteDeadline() {
+		return c.Conn.Write(b)
+	}
+	// 1. Calculate packet delays immediately.
+	var serializationDelay, propagationDelay time.Duration
+	limit := c.p.Bandwidth.Limit()
+	if limit != 0 {
+		serializationDelay = transmissionTime(limit, len(b), c.headerSize)
+	}
+	propagationDelay = delayTime(c.p.Latency, c.p.Jitter)
+
+	// 2. Schedule our packet using the calculated delay.
+	req := writeReq{
+		data: make([]byte, len(b)),
+		due:  time.Now().Add(serializationDelay + propagationDelay),
+	}
+	copy(req.data, b)
+
+	// 3. Enqueue (and do a non-blocking check for stop).
 	select {
 	case <-c.stopCh:
 		return c.Conn.Write(b)
-	default:
-		// don't block on non-closed stopCh
+	case c.writeCh <- req:
+		return len(b), nil
 	}
-
-	// Since we return immediately, we must copy the data to own it.
-	// Otherwise, the caller might modify 'b' while our goroutine is sleeping.
-	data := make([]byte, len(b))
-	copy(data, b)
-
-	go func() {
-		// Serialization Delay (Bandwidth)
-		if c.p.Bandwidth != nil {
-			limit := c.p.Bandwidth.Limit()
-			if limit != 0 {
-				delay := transmissionTime(limit, len(data), c.headerSize)
-				c.throttleMu.Lock()
-				time.Sleep(delay)
-				c.throttleMu.Unlock()
-			}
-		}
-		// Fault Injection (Fault)
-		if c.p.Fault != nil && c.p.Fault.ShouldClose() {
-			c.Close() // simulate abrupt connection drop
-			return
-		}
-		// Propagation delay (Latency + Jitter)
-		if d := delayTime(c.p.Latency, c.p.Jitter); d != 0 {
-			time.Sleep(d)
-		}
-		_, _ = c.Conn.Write(b)
-	}()
-	return len(b), nil
 }
 
 var _ net.Conn = (*Conn)(nil)
+
+// Handles writes in strict order.
+func (c *Conn) linkLoop() {
+	for {
+		select {
+		case <-c.stopCh:
+			return
+		case req := <-c.writeCh:
+			// 1. Perform fault injection before writing.
+			if c.p.Fault != nil && c.p.Fault.ShouldClose() {
+				c.Close()
+			}
+			// 2. Wait until due time.
+			wait := time.Until(req.due)
+			if wait > 0 {
+				time.Sleep(wait)
+			}
+			// 3. Write; and because we pull from the channel we can
+			// assume that our packets must be written in order.
+			c.Conn.Write(req.data)
+		}
+	}
+}
+
+// func (c *Conn) isReadDeadline() bool {
+// 	rdl := c.readDeadline.Load().(time.Time)
+// 	return !rdl.IsZero() && rdl.Before(time.Now())
+// }
+
+func (c *Conn) isWriteDeadline() bool {
+	wdl := c.writeDeadline.Load().(time.Time)
+	return !wdl.IsZero() && wdl.Before(time.Now())
+}
