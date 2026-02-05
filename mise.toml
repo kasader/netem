@@ -1,0 +1,14 @@
+[tools]
+go = "1.25.7"
+golangci-lint = "2.8.0"
+
+[tasks]
+fmt = "golangci-lint fmt ./..."
+lint = "golangci-lint run ./..."
+docs = "go doc -http"
+test = "go test -v ./..."
+
+setup-precommit = "mise generate git-pre-commit --write --task=pre-commit"
+pre-commit = "mise r fmt && mise r test"                                   # Add in lint later
+
+init = "mise run setup-precommit"
