@@ -9,6 +9,7 @@ linters:
   default: none
   enable:
     - revive
+    - govet
     - misspell
     - staticcheck
     - copyloopvar
@@ -37,3 +38,8 @@ linters:
 
   exclusions:
     warn-unused: true
+
+  settings:
+    embeddedstructfieldcheck:
+      # Checks that there is an empty space between the embedded fields and regular fields.
+      empty-line: false

@@ -41,7 +41,5 @@ This package was partially inspired by [cevatbarisyilmaz/lossy][1], and iterates
     Note over Sock: !!! STREAM CORRUPTION: <br/>Expected "HelloWorld", Got "WorldHello"
     ```
 
-This project uses golangci-lint. Run using `golangci-lint run ./...`. Maybe I will add a Makefile at some point (not sure).
-
 [1]: https://github.com/cevatbarisyilmaz/lossy "cevatbarisyilmaz/lossy"
 [2]: https://en.wikipedia.org/wiki/Head-of-line_blocking "Head-of-Line Blocking"
