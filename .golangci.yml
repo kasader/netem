@@ -43,3 +43,17 @@ linters:
     embeddedstructfieldcheck:
       # Checks that there is an empty space between the embedded fields and regular fields.
       empty-line: false
+
+formatters:
+  enable:
+    - gofumpt
+    - golines
+    - goimports
+
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: "interface{}"
+          replacement: "any"
+    gofumpt:
+      extra-rules: true
