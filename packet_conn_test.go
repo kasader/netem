@@ -75,12 +75,12 @@ func TestPacketConn_Latency(t *testing.T) {
 	}
 }
 
-// forcedJitter switches between +50ms and -50ms to force Packet B to overtake Packet A
+// forcedJitter switches between +50ms and -50ms to force Packet B to overtake Packet A.
 type forcedJitter struct {
 	count atomic.Int32
 }
 
-// Implementation of netem.Jitter interface
+// Implementation of netem.Jitter interface.
 func (f *forcedJitter) Duration() time.Duration {
 	if f.count.Add(1)%2 == 1 {
 		return 50 * time.Millisecond // First packet: high delay

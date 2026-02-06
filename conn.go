@@ -27,23 +27,29 @@ type writeReq struct {
 	due  time.Time
 }
 
+// Conn wraps an existing [net.Conn] to emulate network conditions for
+// stream-oriented protocols.
+//
+// To prevent stream corruption, Conn uses an internal FIFO queue (writeCh)
+// to ensure that data is written to the underlying socket in the exact
+// order it was received from the application, even in the presence of
+// latency and jitter.
 type Conn struct {
 	net.Conn
-	headerSize int
-	mss        int // maximum segment size
-	p          StreamProfile
-
-	writeCh       chan writeReq // FIFO queue
+	headerSize    int
+	mss           int // maximum segment size used for bandwidth calculations
+	p             StreamProfile
+	writeCh       chan writeReq // writeCh acts as a FIFO queue to prevent stream reordering.
 	writeDeadline atomic.Value
-
-	mu           sync.Mutex
-	nextWireTime time.Time
-
-	stopOnce sync.Once
-	stopCh   chan struct{}
+	mu            sync.Mutex
+	nextWireTime  time.Time // Tracks when the next segment can be physically sent
+	stopOnce      sync.Once
+	stopCh        chan struct{}
 }
 
-// NewConn TODO: insert docs.
+// NewConn wraps an existing net.Conn to emulate network conditions for stream-oriented
+// protocols like TCP. It ensures that data order is strictly preserved even when
+// jitter or latency is applied.
 func NewConn(c net.Conn, p StreamProfile) net.Conn {
 	headerSize := getHeaderSize(c.LocalAddr())
 	mtu := p.MTU

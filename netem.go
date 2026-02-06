@@ -13,12 +13,12 @@ const (
 )
 
 const (
-	// WANs
+	// EthernetDefaultMTU is the standard MTU for most WANs and Internet traffic (1500 bytes).
 	EthernetDefaultMTU = 1_500
-	// datacenter
+	// EthernetJumboFrameMTU is used in data center environments to reduce CPU overhead (9000 bytes).
 	EthernetJumboFrameMTU = 9_000
-	// this is usually the MTU that is used for linux loopback devices.
-	// TODO: see if this is generalizable to other OSes.
+	// IPMaximumMTU represents the maximum possible size of an IP packet.
+	// This is commonly the default MTU for Linux loopback devices.
 	IPMaximumMTU = 65_536
 )
 

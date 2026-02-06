@@ -49,21 +49,25 @@ type PacketProfile struct {
 	Loss      Loss
 }
 
-// PacketConn TODO: insert doc.
+// PacketConn wraps an existing [net.PacketConn] to emulate network conditions
+// for packet-oriented protocols.
+//
+// Unlike Conn, PacketConn allows for natural packet reordering if jitter
+// configurations cause a later packet to be scheduled for delivery earlier
+// than a previous one.
 type PacketConn struct {
 	net.PacketConn
-	headerSize int
-	mss        int
-	p          PacketProfile
-
+	headerSize    int
+	mss           int
+	p             PacketProfile
 	writeCh       chan packetReq
 	writeDeadline atomic.Value
-
-	stopOnce sync.Once
-	stopCh   chan struct{}
+	stopOnce      sync.Once
+	stopCh        chan struct{}
 }
 
-// NewPacketConn TODO: insert doc.
+// NewPacketConn wraps an existing net.PacketConn to emulate network conditions
+// for packet-oriented protocols like UDP.
 func NewPacketConn(c net.PacketConn, p PacketProfile) net.PacketConn {
 	headerSize := getHeaderSize(c.LocalAddr())
 	mtu := p.MTU
