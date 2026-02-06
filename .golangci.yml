@@ -1,0 +1,59 @@
+# https://golangci-lint.run/usage/configuration/
+version: "2"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  default: none
+  enable:
+    - revive
+    - govet
+    - misspell
+    - staticcheck
+    - copyloopvar
+    - dupl
+    - dupword
+    - err113
+    - embeddedstructfieldcheck
+    - errorlint
+    - errname
+    - forbidigo
+    - goconst
+    - godoclint
+    - godot
+    - goheader
+    - makezero
+    - modernize
+    - nilerr
+    - nilnil
+    - perfsprint
+    - prealloc
+    - sloglint
+    - spancheck
+    - unused
+    - unparam
+    - whitespace
+
+  exclusions:
+    warn-unused: true
+
+  settings:
+    embeddedstructfieldcheck:
+      # Checks that there is an empty space between the embedded fields and regular fields.
+      empty-line: false
+
+formatters:
+  enable:
+    - gofumpt
+    - golines
+    - goimports
+
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: "interface{}"
+          replacement: "any"
+    gofumpt:
+      extra-rules: true
