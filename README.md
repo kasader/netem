@@ -54,28 +54,5 @@ func TestMyNetworkCode(t *testing.T) {
 }
 ```
 
-## Core Features (v0.1.0)
-
-### 1. Dynamic Policies (`netem/policy`)
-
-Inspired by the design of `slog.LevelVar`, `netem` uses an indirection system for its metrics. By using `Var` types, you can change network conditions on-the-fly for active connections.
-
-- **Bandwidth**: Limit throughput (bits per second) via `StaticBandwidth` or the thread-safe `BandwidthVar`.
-
-- **Latency**: Add base propagation delay.
-
-- **Jitter**: Introduce variance in delivery time. `RandomJitter` provides amplitude-based variance.
-
-- **Loss**: Simulate packet drops with `RandomLoss`.
-
-- **Fault**: Manually trigger connection failures or closures.
-
-### 2. Protocol-Specific Wrappers
-
-- **`Conn` (Stream-Oriented)**: Designed for TCP-like behavior. Uses an internal FIFO queue to ensure that jitter manifests as **Head-of-Line Blocking** rather than byte-stream corruption.
-
-- **`PacketConn` (Packet-Oriented)**: Designed for UDP-like behavior. Supports natural packet reordering, allowing later datagrams to overtake earlier ones if jitter is sufficiently high.
-
-
 [1]: https://github.com/cevatbarisyilmaz/lossy "cevatbarisyilmaz/lossy"
 [2]: https://en.wikipedia.org/wiki/Head-of-line_blocking "Head-of-Line Blocking"
