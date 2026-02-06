@@ -10,8 +10,8 @@ import (
 	"github.com/kasader/netem/policy"
 )
 
-// TestTCP_Latency verifies that data is actually delayed by the specified duration.
-func TestTCP_Latency(t *testing.T) {
+// TestConn_Latency verifies that data is actually delayed by the specified duration.
+func TestConn_Latency(t *testing.T) {
 	// 1. Create a pipe (simulates a TCP connection)
 	client, server := net.Pipe()
 	defer client.Close()
@@ -51,9 +51,9 @@ func TestTCP_Latency(t *testing.T) {
 	}
 }
 
-// TestTCP_Ordering verifies that TCP streams remain ordered
+// TestConn_Ordering verifies that TCP streams remain ordered
 // even if Jitter creates "faster" packets that try to jump the queue.
-func TestTCP_Ordering(t *testing.T) {
+func TestConn_Ordering(t *testing.T) {
 	c1, c2 := net.Pipe()
 	defer c1.Close()
 	defer c2.Close()
@@ -101,8 +101,8 @@ func TestTCP_Ordering(t *testing.T) {
 	}
 }
 
-// TestTCP_Dynamic verifies we can change latency on the fly.
-func TestTCP_Dynamic(t *testing.T) {
+// TestConn_Dynamic verifies we can change latency on the fly.
+func TestConn_Dynamic(t *testing.T) {
 	c1, c2 := net.Pipe()
 	defer c1.Close()
 	defer c2.Close()
