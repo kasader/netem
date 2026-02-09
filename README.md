@@ -9,7 +9,7 @@
 
 ## Why netem?
 
-While several tools exist for network emulation at the OS level (like `tc-netem` on Linux), `netem` brings this capability directly into the Go test suite. It allows you to wrap existing connections to simulate poor network conditions without requiring administrative privileges or external dependencies.
+While several tools exist for network emulation at the OS level (like `tc-netem` on Linux), `netem` provides this capability to Go testing. It allows you to wrap existing connections to simulate poor network conditions without requiring non-Go dependencies.
 
 ### Key Improvements
 
@@ -17,15 +17,15 @@ This package iterates on the design of [`cevatbarisyilmaz/lossy`][1], focusing o
 
 - **Idiomatic API**: Designed to feel like a natural extension of the `net` package.
 
-- **Resource Efficiency**: Replaces "goroutine-per-packet" models with internal FIFO queues to prevent unbounded resource growth at high throughput.
+- **Resource Efficiency**: Replaces the "goroutine-per-packet" models to prevent unbounded resource growth at high throughput.
 
-- **Stream Integrity**: Specifically addresses the "WorldHello" corruption bug. In stream-oriented protocols (TCP), high jitter should cause [Head-of-Line Blocking][2], not out-of-order byte delivery.
+- **Stream Integrity**: Addresses the "World!Hello, " corruption bug. I.e, in stream-oriented protocols (TCP), high jitter should cause [Head-of-Line Blocking][2], and not out-of-order byte delivery (as the other package does).
 
 ## Dynamic Configuration (Inspired by `slog`)
 
 Thread-safe indirection is usable out-of-the-box, inspired by the design of `slog.LevelVar`.
 
-Instead of static values, `netem` uses **Policies**. By using types like `policy.LatencyVar` or `policy.BandwidthVar`, you can alter network conditions on the fly for an *active* connection without needing to reconnect or use complex synchronization in your application code.
+Instead of static values, `netem` uses **Policies**. By using types like `policy.LatencyVar` or `policy.BandwidthVar`, you can alter network conditions on the fly for an *active* connection.
 
 ## Usage
 
