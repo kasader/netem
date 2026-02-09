@@ -19,7 +19,7 @@ This package iterates on the design of [`cevatbarisyilmaz/lossy`][1], focusing o
 
 - **Resource Efficiency**: Replaces the "goroutine-per-packet" models to prevent unbounded resource growth at high throughput.
 
-- **Stream Integrity**: Addresses the "World!Hello, " corruption bug. I.e, in stream-oriented protocols (TCP), high jitter should cause [Head-of-Line Blocking][2], and not out-of-order byte delivery (as the other package does).
+- **Stream Integrity**: Addresses the "World!Hello, " corruption bug. I.e, in stream-oriented protocols (TCP), high jitter should cause [Head-of-Line Blocking][2], and not out-of-order byte delivery.
 
 ## Dynamic Configuration (Inspired by `slog`)
 
