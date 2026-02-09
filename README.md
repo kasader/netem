@@ -23,7 +23,7 @@ This package iterates on the design of [`cevatbarisyilmaz/lossy`][1], focusing o
 
 ## Dynamic Configuration (Inspired by `slog`)
 
-One of the standout features of `netem` is its thread-safe indirection system, inspired by the design of `slog.LevelVar`.
+Thread-safe indirection is usable out-of-the-box, inspired by the design of `slog.LevelVar`.
 
 Instead of static values, `netem` uses **Policies**. By using types like `policy.LatencyVar` or `policy.BandwidthVar`, you can alter network conditions on the fly for an *active* connection without needing to reconnect or use complex synchronization in your application code.
 
