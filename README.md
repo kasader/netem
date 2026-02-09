@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![GitHub Release](https://img.shields.io/github/v/release/kasader/netem?include_prereleases)](https://github.com/kasader/netem/releases)
 
-`netem` is a lightweight Go network emulation package designed to wrap standard `net.Conn` and `net.PacketConn` interfaces. It allows developers to simulate real-world network conditions, like restricted bandwidth, high latency, jitter, and packet loss, directly within their Go tests.
+`netem` is a lightweight Go network emulation package designed to wrap standard `net.Conn` and `net.PacketConn` interfaces. It allows simulation of real-world network conditions, like restricted bandwidth, high latency, jitter, and packet loss, directly within Go tests.
 
 ## Why netem?
 
